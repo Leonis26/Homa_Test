@@ -13,24 +13,30 @@ public class Cutter : MonoBehaviour
         m_collider.enabled = false;
         var v = collision.gameObject;
         Destroy(collision.collider);
-        var cutable = v.GetComponent<Cuttable>();
-        var pieces = MeshCut.Cut(v, collision.contacts[0].point, cutable.transform.forward, cutable.InsideMat);
+        var cuttable = v.GetComponent<CuttablePickable>();
+        var pieces = MeshCut.Cut(v, collision.contacts[0].point, cuttable.transform.forward, cuttable.InsideMat);
+        var remainingSplits = cuttable.RemainingSplits - 1;
         Rigidbody rb;
         for (int i = 0; i < pieces.Length; i++)
         {
-            //Destroy(pieces[i].GetComponent<KnifeTargetSlice>());
-            if ((rb = pieces[i].GetComponent<Rigidbody>()) != null)
+            var piece = pieces[i];
+            if ((rb = piece.GetComponent<Rigidbody>()) != null)
                 rb.mass = 100f;
             else
             {
-                rb = pieces[i].AddComponent<Rigidbody>();
+                rb = piece.AddComponent<Rigidbody>();
                 rb.mass = 100f;
+                cuttable = piece.AddComponent<CuttablePickable>();
             }
-            MeshCollider msh = pieces[i].AddComponent<MeshCollider>();
+            MeshCollider msh = piece.AddComponent<MeshCollider>();
             msh.convex = true;
+            cuttable.Init(remainingSplits, cuttable.InsideMat, msh, rb);
             rb.AddExplosionForce(1, transform.position, 10f);
+
+            piece.layer = LayerMask.NameToLayer("InteractibleObject");
         }
     }
 
     public void Activate() => m_collider.enabled = true;
+    public void ShowHide(bool _onOff) => gameObject.SetActive(_onOff);
 }

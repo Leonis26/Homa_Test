@@ -169,6 +169,7 @@ namespace BLINDED_AM_ME
 
             victim.name = "left side";
             victim.GetComponent<MeshFilter>().mesh = left_HalfMesh;
+            left_HalfMesh.RecalculateBounds();
 
             GameObject leftSideObj = victim;
 
@@ -176,6 +177,7 @@ namespace BLINDED_AM_ME
             rightSideObj.transform.position = victim.transform.position;
             rightSideObj.transform.rotation = victim.transform.rotation;
             rightSideObj.GetComponent<MeshFilter>().mesh = right_HalfMesh;
+            right_HalfMesh.RecalculateBounds();
 
             if (victim.transform.parent != null)
             {
