@@ -3,6 +3,8 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.AI;
 using DG.Tweening;
+using System;
+using System.Linq;
 
 [RequireComponent(typeof(Animator))]
 [RequireComponent(typeof(CharacterController))]
@@ -66,11 +68,9 @@ public class PersonController : MonoBehaviour
             if (State != STATE.CARRYING)
                 OnCarry();
             var p = t.GetComponent<IPickable>();
-            var a = new GameObject("woodAnchor").transform;
-            a.SetPositionAndRotation(p.Rb.worldCenterOfMass, t.rotation);//.transform;
-            t.SetParent(a, true);
+            p.TryAnchor();
             p.OnPick();
-            StartCoroutine(LerpObject(a, m_handsPick.GetEmptySlot(), p.InteractedDirection));
+            StartCoroutine(LerpObject(p, m_handsPick.GetEmptySlot(), p.InteractedDirection));
         }
     }
 
@@ -78,23 +78,26 @@ public class PersonController : MonoBehaviour
     {
     }
 
-    IEnumerator LerpObject(Transform _obj, Transform _toT, Vector3 _toDir, bool apparentDirectly = false)
+    IEnumerator LerpObject(IPickable _p, Transform _toT, Vector3 _toDir, bool apparentDirectly = false, Action _onOver = null)
     {
+        var t = _p.Anchor;
         if (apparentDirectly)
-            _obj.SetParent(_toT);
+            t.SetParent(_toT);
         var timer = 1f;
         var time = 0f;
+        var toPosAdd = Vector3.up * _p.SavedBounds.extents.y;
         while (time < timer)
         {
             time += Time.deltaTime;
             var ratio = time / timer;
-            _obj.position = Vector3.Lerp(_obj.position, _toT.position, ratio);
-            _obj.rotation = Quaternion.Lerp(_obj.rotation, _toT.rotation * Quaternion.LookRotation(_toDir), ratio);
+            t.position = Vector3.Lerp(t.position, _toT.position + toPosAdd, ratio);
+            t.rotation = Quaternion.Lerp(t.rotation, _toT.rotation * Quaternion.LookRotation(_toDir), ratio);
             yield return new WaitForEndOfFrame();
         }
-        _obj.position = _toT.position;
-        _obj.SetParent(_toT);
-        _obj.localRotation = Quaternion.LookRotation(_toDir);// Quaternion.identity;        
+        t.position = _toT.position + toPosAdd;
+        t.SetParent(_toT, true);
+        t.localRotation = Quaternion.LookRotation(_toDir);// Quaternion.identity;
+        _onOver?.Invoke();
     }
 
     public virtual void DoInteraction(InteractionPlate _interactionPlate, Vector3 _rotationCorrection)
@@ -108,21 +111,31 @@ public class PersonController : MonoBehaviour
         m_Animator.SetBool("carrying", true);
     }
 
-    protected virtual void Drop(in DropSlotsManager _dropSlotter)
+    protected virtual void Drop(in DropSlotsManager _dropSlotter, Action _onOver = null)
     {
         State = STATE.INTERACTING;
         var handsSlots = m_handsPick.ObjSlots;
+        Action onDrop = () => { };
+        _onOver += () => m_Animator.SetBool("carrying", false);
         for (int i = 0; i < handsSlots.Count; i++)
         {
             if (handsSlots[i].childCount == 0)
+            {
+                if (i == 0)
+                    _onOver.Invoke();
                 break;
+            }
             var piece = handsSlots[i].GetChild(0);
             var eSlot = _dropSlotter.GetEmptySlot();
+            var p = piece.GetComponentInChildren<IPickable>();
+            onDrop = () => p.OnDrop();
+            var nextSlot = handsSlots.ElementAtOrDefault(i + 1);
+            if (!nextSlot || nextSlot.childCount == 0)
+                onDrop += _onOver;
             if (!eSlot)
                 eSlot = m_backDiscarder;
-            StartCoroutine(LerpObject(piece, eSlot, handsSlots[i].eulerAngles, true));
+            StartCoroutine(LerpObject(p, eSlot, piece.InverseTransformDirection(piece.right), true, onDrop));
         }
-        m_Animator.SetBool("carrying", false);
     }
 
     public virtual bool CanInteract(in InteractionPlate _plate)

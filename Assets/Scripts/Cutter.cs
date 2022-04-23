@@ -14,12 +14,14 @@ public class Cutter : MonoBehaviour
         var v = collision.gameObject;
         Destroy(collision.collider);
         var cuttable = v.GetComponent<CuttablePickable>();
-        var pieces = MeshCut.Cut(v, collision.contacts[0].point, cuttable.transform.forward, cuttable.InsideMat);
+        var pieces = MeshCut.Cut(v, cuttable.Anchor.position, cuttable.InteractedDirection, cuttable.InsideMat);
+        var aPos = collision.GetContact(0).point;// cuttable.Anchor.position;
         var remainingSplits = cuttable.RemainingSplits - 1;
         Rigidbody rb;
         for (int i = 0; i < pieces.Length; i++)
         {
             var piece = pieces[i];
+            var insideMat = cuttable.InsideMat;
             if ((rb = piece.GetComponent<Rigidbody>()) != null)
                 rb.mass = 100f;
             else
@@ -30,9 +32,8 @@ public class Cutter : MonoBehaviour
             }
             MeshCollider msh = piece.AddComponent<MeshCollider>();
             msh.convex = true;
-            cuttable.Init(remainingSplits, cuttable.InsideMat, msh, rb);
-            rb.AddExplosionForce(1, transform.position, 10f);
-
+            cuttable.Init(remainingSplits, insideMat, msh, rb);
+            rb.AddExplosionForce(10, aPos, 10, 2, ForceMode.Acceleration);
             piece.layer = LayerMask.NameToLayer("InteractibleObject");
         }
     }

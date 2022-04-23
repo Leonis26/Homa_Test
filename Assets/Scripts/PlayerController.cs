@@ -2,6 +2,7 @@ using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using System.Threading.Tasks;
+using System;
 
 public class PlayerController : PersonController
 {
@@ -41,21 +42,30 @@ public class PlayerController : PersonController
         switch (_interactionPlate.InteractionType)
         {
             case InteractionPlate.INTERACTION_TYPE.CHOPPER:
-                Drop(_interactionPlate.DropSlotter);
-                StartCoroutine(DoAttack(_rotationCorrection));
+                Drop(_interactionPlate.DropSlotter, () => StartCoroutine(DoAttack(_rotationCorrection)));
                 break;
             case InteractionPlate.INTERACTION_TYPE.TREE:
-
+                StartCoroutine(DoAttack(_rotationCorrection));
+                break;
+            case InteractionPlate.INTERACTION_TYPE.DROPPER:
+                Drop(_interactionPlate.DropSlotter, () => State = STATE.FREE_MOVE);
                 break;
         }
-        State = STATE.FREE_MOVE;
+    }
+
+    IEnumerator WaitAndDoAction(Coroutine _toWait, IEnumerator _toDo)
+    {
+        yield return new WaitWhile(() => _toWait != null);
+        StartCoroutine(_toDo);
     }
 
     public IEnumerator DoAttack(Vector3 _rotationCorrection)
     {
         Stop();
+        m_AxeCutter.ShowHide(true);
         m_AxeCutter.Activate();
         LookAt(_rotationCorrection);
+        m_Animator.SetBool("carrying", false);
         m_Animator.SetTrigger("chop");
         while (!m_Animator.GetCurrentAnimatorStateInfo(0).IsName("Chop"))
         {
@@ -72,17 +82,20 @@ public class PlayerController : PersonController
         m_AxeCutter.ShowHide(false);
     }
 
-    protected override void Drop(in DropSlotsManager _dropSlotter)
+    protected override void Drop(in DropSlotsManager _dropSlotter, Action _onOver = null)
     {
-        base.Drop(_dropSlotter);
+        base.Drop(_dropSlotter, _onOver);
     }
 
     public override bool CanInteract(in InteractionPlate _plate)
     {
         return (_plate.InteractionType == InteractionPlate.INTERACTION_TYPE.CHOPPER
-            && _plate.DropSlotter.ObjSlots[0].childCount > 0)
+            && (_plate.DropSlotter.ObjSlots[0].childCount > 0 || m_handsPick.ObjSlots[0].childCount > 0))
             || (_plate.InteractionType == InteractionPlate.INTERACTION_TYPE.DROPPER
-            && _plate.DropSlotter.GetEmptySlot() && m_handsPick.ObjSlots[0].childCount > 0);
+            && _plate.DropSlotter.GetEmptySlot() && m_handsPick.ObjSlots[0].childCount > 0)
+            || (_plate.InteractionType == InteractionPlate.INTERACTION_TYPE.TREE
+            && m_handsPick.ObjSlots[0].childCount == 0)
+            ;
     }
 
 }

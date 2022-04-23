@@ -14,6 +14,7 @@ public class InteractionPlate : MonoBehaviour
     float m_originalInteractableHeight;
     [SerializeField] DropSlotsManager m_DropSlotter;
     public DropSlotsManager DropSlotter => m_DropSlotter;
+    [SerializeField] float m_toGoLimit;
 
     public enum INTERACTION_TYPE
     {
@@ -57,7 +58,7 @@ public class InteractionPlate : MonoBehaviour
         NavMesh.SamplePosition(m_goToInteract.position, out NavMeshHit hit, .1f, NavMesh.AllAreas);
         var playerT = _person.transform;
         //var playerA = _player.Agent;
-        while ((m_goToInteract.position - playerT.position).magnitude > .05f) //new Vector2(playerT.position.x, playerT.position.z) != new Vector2(m_goToInteract.position.x, m_goToInteract.position.z))
+        while ((m_goToInteract.position - playerT.position).magnitude > m_toGoLimit) //new Vector2(playerT.position.x, playerT.position.z) != new Vector2(m_goToInteract.position.x, m_goToInteract.position.z))
         {
             _person.DoMove(m_goToInteract.position - playerT.position);
             yield return new WaitForEndOfFrame();

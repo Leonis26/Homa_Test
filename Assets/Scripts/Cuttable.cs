@@ -15,6 +15,7 @@ public class Cuttable : MonoBehaviour, ICuttable
     public Collider Col { get; protected set; }
     public Rigidbody Rb { get; protected set; }
 
+    public Bounds SavedBounds { get; protected set; }
 
     private void Start()
     {

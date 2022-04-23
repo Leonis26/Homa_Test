@@ -15,17 +15,15 @@ public class CuttablePickable : Pickable, ICuttable
         Rb = _rb;
         Rb.ResetCenterOfMass();
         Rb.ResetInertiaTensor();
-        //transform.SetParent(Anchor = Instantiate(new GameObject("woodAnchor"), Rb.worldCenterOfMass, transform.rotation).transform);
+        Col = _col;
+        transform.SetParent(null);//Anchor = Instantiate(new GameObject("woodAnchor"), Rb.worldCenterOfMass, transform.rotation).transform);
         //Anchor = Instantiate(new GameObject("woodAnchor"), Rb.worldCenterOfMass, transform.rotation).transform);
-        //Init(InteractedDirection);
         m_RemainingSplits = _splits;
         InsideMat = _insideMat;
-        Col = _col;
         if (_splits == 1)
-            InteractedDirection = Vector3.up;
+            Init(Vector3.up);
         else
-            InteractedDirection = Vector3.right;
-        gameObject.tag = "Pickable";
+            Init(Vector3.right);
     }
 
     public void OnCut()
